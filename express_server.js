@@ -69,7 +69,22 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   const url = req.params.shortURL;
   const templateVars = { urls: urlDatabase };
   delete urlDatabase[url];
+
   res.render("urls_index", templateVars);
+});
+
+// updating an exist longURL
+
+app.post("/urls/:id", (req, res) => {
+  const shortUrlId = req.params.id;
+  const newURL = req.body.newUrl;
+  urlDatabase[shortUrlId] = newURL;
+  const templateVars = {
+    longURL: urlDatabase[shortUrlId],
+    shortURL: shortUrlId,
+  };
+
+  res.render("urls_show", templateVars);
 });
 
 app.listen(PORT, () => {
