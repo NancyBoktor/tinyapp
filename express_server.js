@@ -6,6 +6,9 @@ app.set("view engine", "ejs");
 //the data in the post request body is sent as a Buffer(it's not readable for us humans)
 //so we install middleware (body-parser) to make the data
 const bodyParser = require("body-parser");
+
+const cookieParser = require("cookie-parser");
+app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true }));
 const generateRandomString = () => {
   const random = Math.random().toString(26).substring(2, 8);
@@ -26,7 +29,8 @@ const urlDatabase = {
 // });
 
 app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlDatabase };
+  const templateVars = { urls: urlDatabase, username: req.cookies["username"] };
+
   res.render("urls_index", templateVars);
 });
 
@@ -64,17 +68,16 @@ app.get("/urls/:shortURL", (req, res) => {
   };
   res.render("urls_show", templateVars);
 });
+
 // Deleting Url
 app.post("/urls/:shortURL/delete", (req, res) => {
   const url = req.params.shortURL;
   const templateVars = { urls: urlDatabase };
   delete urlDatabase[url];
-
   res.render("urls_index", templateVars);
 });
 
 // updating an exist longURL
-
 app.post("/urls/:id", (req, res) => {
   const shortUrlId = req.params.id;
   const newURL = req.body.newUrl;
@@ -83,8 +86,17 @@ app.post("/urls/:id", (req, res) => {
     longURL: urlDatabase[shortUrlId],
     shortURL: shortUrlId,
   };
-
   res.render("urls_show", templateVars);
+});
+
+//Login route
+app.post("/Login", (req, res) => {
+  // extract the username
+  let username = req.body.username;
+  // save our data
+  res.cookie("username", username);
+  // after login send it bach to /Urls page
+  res.redirect("/urls");
 });
 
 app.listen(PORT, () => {
