@@ -10,6 +10,15 @@ const cookieParser = require("cookie-parser");
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+//secure by cookieSession
+const cookieSession = require("cookie-session");
+app.use(
+  cookieSession({
+    name: "session",
+    keys: ["We need to secure our values", "Let us do it!!!!"],
+  })
+);
+
 // security system using bcryptjs
 const bcrypt = require("bcryptjs");
 const salt = bcrypt.genSaltSync(10);
@@ -49,56 +58,23 @@ const users = {
     password: hashPassword3,
   },
 };
-
 // helper function to generate random string
-const generateRandomString = () => {
-  const random = Math.random().toString(26).substring(2, 8);
-  return random;
-};
-
-// helper function find user by name
-const findUserByEmail = (email, users) => {
-  let user = {};
-
-  for (let userID in users) {
-    if (users[userID].email === email) {
-      user = users[userID];
-
-      return user;
-    }
-  }
-  return false;
-};
-
-// check password with the hash password
-const truePassword = (password, userDb) => {
-  if (bcrypt.compareSync(password, userDb.password)) {
-    return true;
-  }
-  return false;
-};
-
-// get url by user ID
-const getURLSByUser = (userID) => {
-  const urls = {};
-
-  for (let shortUrl in urlDatabase) {
-    if (urlDatabase[shortUrl].userID === userID) {
-      urls[shortUrl] = urlDatabase[shortUrl];
-    }
-  }
-  return urls;
-};
+const {
+  generateRandomString,
+  findUserByEmail,
+  truePassword,
+  getURLSByUser,
+} = require("./helpers");
 
 // endpoint
 app.get("/urls", (req, res) => {
-  const userid = req.cookies["user_id"];
+  const userid = req.session.userid;
 
   if (!userid) {
     return res.redirect("/login");
   }
 
-  const urls = getURLSByUser(userid);
+  const urls = getURLSByUser(userid, urlDatabase);
 
   const templateVars = {
     user: users[userid],
@@ -110,27 +86,22 @@ app.get("/urls", (req, res) => {
 });
 
 app.get("/urls/new", (req, res) => {
-  const userid = req.cookies["user_id"];
-
-  if (userid) {
-    const templateVars = { user: users[userid] };
-
-    return res.render("urls_new", templateVars);
+  const userid = req.session.userid;
+  const templateVars = { user: users[userid] };
+  if (!userid) {
+    return res.redirect("/login");
   }
 
-  return res.redirect("/login");
+  res.render("urls_new", templateVars);
 });
 
 // POST
 app.post("/urls", (req, res) => {
-  const userID = req.cookies["user_id"];
-
+  const userID = req.session.userid;
   const longURL = req.body.longURL;
-
   const shortURLId = generateRandomString();
 
   urlDatabase[shortURLId] = { longURL, userID };
-
   res.redirect(`/urls/${shortURLId}`);
 });
 
@@ -145,8 +116,7 @@ app.get("/u/:shortURL", (req, res) => {
 
 // route
 app.get("/urls/:shortURL", (req, res) => {
-  const userid = req.cookies["user_id"];
-  console.log(userid);
+  const userid = req.session.userid;
   if (!userid) {
     return res.redirect("/login");
   }
@@ -171,7 +141,7 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 
 // updating an exist longURL
 app.post("/urls/:id", (req, res) => {
-  const userid = req.cookies.user_id;
+  const userid = req.session.userid;
 
   const shortUrlId = req.params.id;
 
@@ -199,28 +169,21 @@ app.post("/register", (req, res) => {
   const { email, password } = req.body;
 
   const userFound = findUserByEmail(email, users);
+  const hashPassword = bcrypt.hashSync(password, 10);
 
-  const passwordFound = truePassword(password, userFound);
-
-  if (email === "") {
-    res.status(400);
-
-    return;
+  if (email.length === 0) {
+    return res.status(400);
   } else if (userFound) {
-    if (passwordFound) {
-      return res.status(400).send("Sorry, that user already exists!");
-    } else if (!passwordFound) {
-      return res.send("un correct password");
-    }
+    return res.status(400).send("Sorry, that user already exists!");
   } else {
     let userid = generateRandomString();
     users[userid] = {
       id: userid,
       email,
-      password,
+      password: hashPassword,
     };
 
-    res.cookie("user_id", userid);
+    req.session.userid = userid;
 
     res.redirect("/urls");
   }
@@ -237,11 +200,9 @@ app.post("/login", (req, res) => {
   let { email, password } = req.body;
 
   const userFound = findUserByEmail(email, users);
-
-  const passwordFound = truePassword(password, userFound);
-
+  const passwordFound = truePassword(password, userFound.password);
   if (userFound && passwordFound) {
-    res.cookie("user_id", userFound["id"]);
+    req.session.userid = userFound["id"];
 
     return res.redirect("/urls");
   }
@@ -251,7 +212,7 @@ app.post("/login", (req, res) => {
 
 //logout POST
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id");
+  req.session = null;
   res.redirect("/login");
 });
 

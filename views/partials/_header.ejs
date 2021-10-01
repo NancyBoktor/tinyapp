@@ -15,13 +15,13 @@
         </div>
         <div class="d-flex ">
         <%if (user && user.id){ %>
-            <small class="form-text text-muted mx-2">"Logged in As: " <%= user.email  %> </small>
+            <p class="form-text text-muted mx-2">"Logged in As: " <%= user.email  %> </p>
             <form method="POST" action="/Logout">
                 <button type="submit" class="btn btn-outline-dark">Logout</button>
             </form>
             <% } else { %>
-                <a href="/Login" >Login</a>
-                <a href="/register" >Register</a>
+                <a href="/Login" class="nav-item nav-link" >Login</a>
+                <a href="/register" class="nav-item nav-link">Register</a>
      <% } %>
     </div>
     </nav>
