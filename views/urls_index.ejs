@@ -33,22 +33,27 @@
                             <%= url %>
                         </td>
                         <td>
-                            <%= urls[url] %>
+                            <%= urls[url].longURL %>
                         </td>
                          <td>
                            <form method="GET" action="/urls/<%=url%>">
-                               <button type="submit">Edit </button>
+                            <button type="submit" class="btn btn-outline-primary">Edit</button>
+                             
                            </form>
                         </td>
                         <td>
                            <form method="POST" action="/urls/<%=url%>/delete">
-                               <button type="submit">Delete </button>
+                            <button type="submit" class="btn btn-outline-danger">Delete</button>
                            </form>
                         </td>
                     </tr>
                     <% } %>
             </tbody>
         </table>
+        <% if ( !Object.keys(urls).length) {  %>
+        <p>Please create your first url   </p>
+        <% } %>
+
     </main>
     <!-- Bootstrap JS -->
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
