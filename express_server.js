@@ -5,6 +5,20 @@ const PORT = 8080;
 // using ejs templare.
 app.set("view engine", "ejs");
 
+const bodyParser = require("body-parser");
+const cookieParser = require("cookie-parser");
+app.use(cookieParser());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// security system using bcryptjs
+const bcrypt = require("bcryptjs");
+const salt = bcrypt.genSaltSync(10);
+
+// hash password for users
+const hashPassword1 = bcrypt.hashSync("purple-monkey-dinosaur", salt);
+const hashPassword2 = bcrypt.hashSync("user2@example.com", salt);
+const hashPassword3 = bcrypt.hashSync("123", salt);
+
 // url database
 const urlDatabase = {
   b6UTxQ: {
@@ -22,24 +36,19 @@ const users = {
   userRandomID: {
     id: "userRandomID",
     email: "user@example.com",
-    password: "purple-monkey-dinosaur",
+    password: hashPassword1,
   },
   user2RandomID: {
     id: "user2RandomID",
     email: "user2@example.com",
-    password: "dishwasher-funk",
+    password: hashPassword2,
   },
   user3RandomID: {
     id: "user3RandomID",
     email: "mario@mario.com",
-    password: "123",
+    password: hashPassword3,
   },
 };
-
-const bodyParser = require("body-parser");
-const cookieParser = require("cookie-parser");
-app.use(cookieParser());
-app.use(bodyParser.urlencoded({ extended: true }));
 
 // helper function to generate random string
 const generateRandomString = () => {
@@ -50,22 +59,29 @@ const generateRandomString = () => {
 // helper function find user by name
 const findUserByEmail = (email, users) => {
   let user = {};
+
   for (let userID in users) {
     if (users[userID].email === email) {
       user = users[userID];
+
       return user;
     }
   }
   return false;
 };
 
-// check password
+// check password with the hash password
 const truePassword = (password, userDb) => {
-  return password === userDb.password;
+  if (bcrypt.compareSync(password, userDb.password)) {
+    return true;
+  }
+  return false;
 };
 
+// get url by user ID
 const getURLSByUser = (userID) => {
   const urls = {};
+
   for (let shortUrl in urlDatabase) {
     if (urlDatabase[shortUrl].userID === userID) {
       urls[shortUrl] = urlDatabase[shortUrl];
@@ -77,10 +93,13 @@ const getURLSByUser = (userID) => {
 // endpoint
 app.get("/urls", (req, res) => {
   const userid = req.cookies["user_id"];
+
   if (!userid) {
     return res.redirect("/login");
   }
+
   const urls = getURLSByUser(userid);
+
   const templateVars = {
     user: users[userid],
     urls,
@@ -90,31 +109,32 @@ app.get("/urls", (req, res) => {
   return res.render("urls_index", templateVars);
 });
 
-// 1- post the form
-// 2- extract the data from the body of the request && creat a random string to the shortURLId.
-// 3- insert the data in to db if it was new added and if it exsist we will get the shortURL for it.
-// 4- redirect shortURLId to urls list and the bowser will get resp from there.
-// 5- res.redirect to longURL
-
 app.get("/urls/new", (req, res) => {
   const userid = req.cookies["user_id"];
 
   if (userid) {
     const templateVars = { user: users[userid] };
+
     return res.render("urls_new", templateVars);
   }
+
   return res.redirect("/login");
 });
 
+// POST
 app.post("/urls", (req, res) => {
   const userID = req.cookies["user_id"];
+
   const longURL = req.body.longURL;
+
   const shortURLId = generateRandomString();
+
   urlDatabase[shortURLId] = { longURL, userID };
 
   res.redirect(`/urls/${shortURLId}`);
 });
 
+//route
 app.get("/u/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
 
@@ -125,10 +145,12 @@ app.get("/u/:shortURL", (req, res) => {
 
 // route
 app.get("/urls/:shortURL", (req, res) => {
-  const userid = req.cookies.user_id;
+  const userid = req.cookies["user_id"];
+  console.log(userid);
   if (!userid) {
     return res.redirect("/login");
   }
+
   const templateVars = {
     shortURL: req.params.shortURL,
     longURL: urlDatabase[req.params.shortURL].longURL,
@@ -141,6 +163,7 @@ app.get("/urls/:shortURL", (req, res) => {
 // Deleting Url
 app.post("/urls/:shortURL/delete", (req, res) => {
   const url = req.params.shortURL;
+
   delete urlDatabase[url];
 
   res.redirect("/urls");
@@ -149,9 +172,13 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 // updating an exist longURL
 app.post("/urls/:id", (req, res) => {
   const userid = req.cookies.user_id;
+
   const shortUrlId = req.params.id;
+
   const newURL = req.body.newUrl;
+
   urlDatabase[shortUrlId].longURL = newURL;
+
   const templateVars = {
     longURL: urlDatabase[shortUrlId].longURL,
     shortURL: shortUrlId,
@@ -170,10 +197,14 @@ app.get("/register", (req, res) => {
 // register POST
 app.post("/register", (req, res) => {
   const { email, password } = req.body;
+
   const userFound = findUserByEmail(email, users);
+
   const passwordFound = truePassword(password, userFound);
+
   if (email === "") {
     res.status(400);
+
     return;
   } else if (userFound) {
     if (passwordFound) {
@@ -188,7 +219,9 @@ app.post("/register", (req, res) => {
       email,
       password,
     };
+
     res.cookie("user_id", userid);
+
     res.redirect("/urls");
   }
 });
@@ -202,13 +235,17 @@ app.get("/login", (req, res) => {
 // login POST
 app.post("/login", (req, res) => {
   let { email, password } = req.body;
+
   const userFound = findUserByEmail(email, users);
+
   const passwordFound = truePassword(password, userFound);
+
   if (userFound && passwordFound) {
     res.cookie("user_id", userFound["id"]);
+
     return res.redirect("/urls");
   }
-  // res.redirect("/login");
+
   res.send("uncorrect password");
 });
 
