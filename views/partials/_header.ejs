@@ -13,9 +13,9 @@
             </div>
            
         </div>
-        <div>
+        <div class="d-flex ">
         <%if (user && user.id){ %>
-            <small class="form-text text-muted">"Logged in As: " <%= user.email  %> </small>
+            <small class="form-text text-muted mx-2">"Logged in As: " <%= user.email  %> </small>
             <form method="POST" action="/Logout">
                 <button type="submit" class="btn btn-outline-dark">Logout</button>
             </form>

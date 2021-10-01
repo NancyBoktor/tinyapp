@@ -33,7 +33,7 @@
                             <%= url %>
                         </td>
                         <td>
-                            <%= urls[url] %>
+                            <%= urls[url].longURL %>
                         </td>
                          <td>
                            <form method="GET" action="/urls/<%=url%>">
@@ -50,6 +50,10 @@
                     <% } %>
             </tbody>
         </table>
+        <% if ( !Object.keys(urls).length) {  %>
+        <p>Please create your first url   </p>
+        <% } %>
+
     </main>
     <!-- Bootstrap JS -->
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
