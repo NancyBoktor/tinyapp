@@ -39,9 +39,22 @@ const getURLSByUser = (userID, urlDatabase) => {
   return urls;
 };
 
+// check if url own to user id
+const isOwnUrl = (userID, url, urlDatabase) => {
+  const userUrls = getURLSByUser(userID, urlDatabase);
+  return Object.keys(userUrls).some((u) => url === u);
+};
+
+// check shourt url is in db
+const isExist = (url, urlDatabase) => {
+  return Object.keys(urlDatabase).some((u) => url === u);
+};
+
 module.exports = {
   generateRandomString,
   findUserByEmail,
   truePassword,
   getURLSByUser,
+  isOwnUrl,
+  isExist,
 };
