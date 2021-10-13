@@ -16,8 +16,6 @@ const {
 app.set("view engine", "ejs");
 
 const bodyParser = require("body-parser");
-const cookieParser = require("cookie-parser");
-app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 //secure by cookieSession
@@ -110,13 +108,19 @@ app.get("/urls/new", (req, res) => {
 // user can creat his own shortUrls within this post req
 app.post("/urls", (req, res) => {
   const userID = req.session.userId;
-  const longURL = req.body.longURL;
-  const shortURLId = generateRandomString();
   if (!userID) {
     return res
       .status(400)
       .send("You need to register or login first! Thank you");
   }
+
+  const longURL = req.body.longURL;
+
+  if (!longURL) {
+    return res.status(400).send("You need to pass a longURL!!");
+  }
+
+  const shortURLId = generateRandomString();
 
   urlDatabase[shortURLId] = { longURL, userID };
   res.redirect(`/urls/${shortURLId}`);
@@ -167,20 +171,23 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   res.redirect("/urls");
 });
 
-//when the user want to get his shortURL
+//when the user want to edit his shortURL
 app.post("/urls/:id", (req, res) => {
   const userId = req.session.userId;
-  const shortUrlId = req.params.id;
-
   if (!userId) {
     return res
       .status(400)
       .send("You need to register or login first! Thank you");
   }
+  const shortUrlId = req.params.id;
+
   if (!isOwnUrl(userId, shortUrlId, urlDatabase)) {
     return res.status(403).send("You can't access this url");
   }
   const newURL = req.body.newUrl;
+  if (!newURL) {
+    return res.status(403).send("You need to pass newURL!!");
+  }
 
   urlDatabase[shortUrlId].longURL = newURL;
 
@@ -237,22 +244,27 @@ app.get("/login", (req, res) => {
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
 
+  if (!email || !password) {
+    return res.status(400).send("Email or Password is empty!!");
+  }
   const userFound = findUserByEmail(email, users);
+  if (!userFound) {
+    return res.status(400).send("Email cannot be found!!");
+  }
   const passwordFound = truePassword(password, userFound.password);
-
-  if (userFound && passwordFound) {
-    req.session.userId = userFound["id"];
-
-    return res.redirect("/urls");
+  if (!passwordFound) {
+    return res.status(400).send("wrong password!!");
   }
 
-  res.status(403).send("Email cannot be found or wrong password/email");
+  req.session.userId = userFound["id"];
+
+  return res.redirect("/urls");
 });
 
 //user can logout within this post req
 app.post("/logout", (req, res) => {
   req.session = null;
-  res.redirect("/urls");
+  res.redirect("/login");
 });
 
 //server is lisening
